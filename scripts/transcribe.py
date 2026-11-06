@@ -5,7 +5,9 @@ import sys
 
 sys.stdout.reconfigure(encoding='utf-8', errors='replace')
 
-MODEL_DIR = r'D:/chitose/tools/whisper'
+ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+MODEL_DIR = os.environ.get('CHITOSE_WHISPER_DIR',
+                           os.path.join(ROOT, 'tools', 'whisper'))
 
 
 def _add_cuda_dlls():

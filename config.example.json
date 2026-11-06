@@ -1,0 +1,17 @@
+{
+  "_说明": "把这份文件复制成 config.json，再改下面三项。config.json 不会被传到 GitHub，可以放心填。",
+  "brain": {
+    "_说明": "任何 OpenAI 兼容的模型服务都行。base_url 写到 /v1 这一层就够了。",
+    "base_url": "https://dashscope.aliyuncs.com/compatible-mode/v1",
+    "api_key": "把这里换成你自己的钥匙",
+    "model": "deepseek-v4.1-flash-1017"
+  },
+  "voice": {
+    "_说明": "想听千岁本来的声音就改成 true。需要先按 README 放好 GPT-SoVITS 和声音包；没有显卡的话保持 false。",
+    "enabled": false
+  },
+  "ears": {
+    "_说明": "想按住说话就改成 true。还需要另外装 faster-whisper 和模型，见 README 的可选章节。",
+    "enabled": false
+  }
+}

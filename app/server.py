@@ -65,19 +65,31 @@ def _wav_b64(x, sr):
 
 
 def answer(user_text):
-    """走一遍：想好 -> 翻成日语 -> 用她的声音念出来。"""
-    ensure_voice()                      # 哑了就先把嗓子叫起来（最多等 45 秒）
+    """走一遍：想好 -> （有声时）翻成日语 -> 用她的声音念出来。
+
+    静音版（config.json 里 voice.enabled=false）只走到「想好」，
+    audio 给 null，网页照样打字、换表情，不会去等一个不存在的嗓子。
+    """
+    voice = cc.voice_enabled()
+    if voice:
+        ensure_voice()                  # 哑了就先把嗓子叫起来（最多等 45 秒）
     cn, jp, mood = cc.ask_llm(HISTORY, user_text)
-    wav = cc.synth(jp)
-    x, sr = sf.read(io.BytesIO(wav), dtype='float32')
-    if x.ndim > 1:
-        x = x.mean(axis=1)
+    audio = None
+    if voice and jp:
+        try:
+            wav = cc.synth(jp)
+            x, sr = sf.read(io.BytesIO(wav), dtype='float32')
+            if x.ndim > 1:
+                x = x.mean(axis=1)
+            audio = _wav_b64(x, sr)
+        except Exception as e:
+            print('  [voice] 这句没合成出来，只打字：%s' % str(e)[:80], flush=True)
     HISTORY.append({'role': 'user', 'content': user_text})
     HISTORY.append({'role': 'assistant', 'content': cn})
     del HISTORY[:-24]   # 保留 12 轮，别让刚才的玩笑太快掉出上下文
     # mood = 这句话的心情（'轻笑'、'害羞' 这些，本来只给嗓子加音效用）。
     # 网页拿它来**换脸**——她说话的时候表情跟着情绪走（宝宝 2026-10-11 定的）。
-    return {'cn': cn, 'jp': jp, 'audio': _wav_b64(x, sr), 'mood': mood}
+    return {'cn': cn, 'jp': jp, 'audio': audio, 'mood': mood}
 
 
 class Say(BaseModel):
@@ -200,6 +212,10 @@ def _record_loop(stop_evt):
 
 @app.post('/api/rec/start')
 def api_rec_start():
+    if not cc.ears_available():
+        return JSONResponse(
+            {'error': '耳朵没装，先打字聊吧——想装耳朵看 README 的「可选：按住说话」。'},
+            status_code=400)
     if STATE['rec'] is not None:
         return {'ok': True, 'already': True}
     stop = threading.Event()
@@ -216,6 +232,8 @@ def api_rec_start():
 
 @app.post('/api/rec/stop')
 def api_rec_stop():
+    if not cc.ears_available():
+        return JSONResponse({'error': '耳朵没装，先打字聊吧。'}, status_code=400)
     th = STATE.get('rec')
     if th is None:
         return JSONResponse({'error': '没在录'}, status_code=400)
@@ -237,6 +255,17 @@ def api_rec_stop():
     out['heard'] = text
     out['lang'] = lang
     return out
+
+
+@app.get('/api/status')
+def api_status():
+    """网页开窗时先看一眼：脑子填了没、耳朵装没装、嗓子开没开。"""
+    return {
+        'brain': cc.brain_configured(),
+        'voice': cc.voice_enabled(),
+        'ears': cc.ears_available(),
+        'config_path': os.path.join(os.path.dirname(HERE), 'config.json'),
+    }
 
 
 @app.get('/api/ping')
@@ -288,10 +317,25 @@ def _envelope(x, sr, hop_ms=30.0):
 _HELLO = {}
 
 
+# 静音版没有预合成的问候声，但话还是要说——用文字打招呼。
+GREET_TEXT = {
+    'morning': '早上好呀，宝宝睡得好吗？',
+    'noon': '到中午啦，宝宝吃饭了没有？',
+    'afternoon': '下午啦，宝宝在忙什么呢？',
+    'evening': '晚上好呀，宝宝今天过得怎么样？',
+    'night': '这么晚还没睡呀，宝宝。',
+}
+
+
 @app.get('/api/hello')
 def api_hello():
     """只报「该说哪句」和它的音量曲线，不播放。播放等网页准备好再喊 /api/hello/play。"""
     key = _greet_key()
+    if not cc.voice_enabled():
+        cn = GREET_TEXT.get(key, '')
+        if cn and not HISTORY:
+            HISTORY.append({'role': 'assistant', 'content': cn})
+        return {'key': key, 'cn': cn, 'jp': '', 'dur': 0.0, 'env': []}
     try:
         g = json.load(open(os.path.join(VOICE, 'greetings.json'), encoding='utf-8'))[key]
     except Exception:
@@ -366,7 +410,9 @@ def main():
     #   是 `int8_float16`（≈3G）塞不进剩下那 2.2G 显存，**卡在载入**，
     #   连累整个界面（背景黑、探针一行都跑不出来，姐姐查了半天）。
     #   改 `int8` 之后：载入 6 秒、识别 0.6 秒、显存 3.8G，全好了。
-    threading.Thread(target=_warm_ears, daemon=True).start()
+    # 耳朵没装就不预热——省得黑窗口里刷一堆 import 失败。
+    if cc.ears_available():
+        threading.Thread(target=_warm_ears, daemon=True).start()
     for _ in range(100):
         if _port(PORT):
             break

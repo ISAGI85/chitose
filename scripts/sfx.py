@@ -17,7 +17,8 @@ import numpy as np
 import soundfile as sf
 from scipy.signal import resample_poly
 
-SFX_DIR = os.environ.get('GSV_SFX', r'D:/chitose/out/sfx')
+ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+SFX_DIR = os.environ.get('GSV_SFX', os.path.join(ROOT, 'out', 'sfx'))
 
 # 把音效的响度拉到跟她的合成语音齐平。
 # 素材是从游戏里直接扒的，音量参差不齐——叹气那批只有语音的一半，

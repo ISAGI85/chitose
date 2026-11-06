@@ -101,8 +101,35 @@ async function boot() {
     scheduleBlink();
   });
 
-  greet();
+  // 先看看这台机器有什么：脑子填了没、耳朵装没装。
+  // 没脑子就先把「怎么填」说出来，比让她安安静静坐着更清楚。
+  const st = await checkStatus();
+  if (!st || st.brain !== false) greet();
   scheduleBlink();
+}
+
+/* ── 开窗先看这台机器有什么 ─────────────────────────
+ * brain：有没有填模型钥匙（没填就在字幕板提醒，界面照样能看）
+ * ears ：耳朵装没装（没装就把「按住说话」收起来，只留打字）
+ */
+async function checkStatus() {
+  let st = null;
+  try { st = await (await fetch('/api/status')).json(); } catch (e) { console.error(e); }
+  if (!st) return null;
+
+  if (!st.ears) {
+    EARS_ON = false;
+    const talk = $('#talk');
+    if (talk) talk.remove();
+  }
+
+  if (!st.brain) {
+    const cfg = st.config_path ? st.config_path.replace(/\\/g, '/') : 'config.json';
+    CN.innerHTML = '<span class="err">姐姐的脑子还没接上。<br>' +
+      '打开 ' + esc(cfg) + '，把 base_url 和 api_key 填好，再开一次窗。</span>';
+    JP.textContent = '';
+  }
+  return st;
 }
 
 function url(L) {
@@ -757,8 +784,14 @@ function reset() {
 
 async function reply(body) {
   const { cn, jp, audio, mood } = body;
-  // 先把声音解出来（要它的长度），再**同时**起字幕——原来是等声音放完才打字，慢了一整句
-  const ab = await audioCtx().decodeAudioData(b64bytes(audio).buffer);
+  // 有声版：先把声音解出来（要它的长度），再**同时**起字幕——原来是等声音放完才打字，慢了一整句
+  // 静音版：audio 是 null，按字数估一个时长，只打字。
+  let ab = null;
+  if (audio) {
+    try {
+      ab = await audioCtx().decodeAudioData(b64bytes(audio).buffer);
+    } catch (e) { console.error(e); }
+  }
   sayNow(cn, jp);
 
   // 这一整句都算「她在说话」——期间不眨眼（见 scheduleBlink）
@@ -775,8 +808,9 @@ async function reply(body) {
     setBaseFace(MOOD_FACE[tag] || 'idle', tag);
     setBlush(MOOD_BLUSH[tag] || null);
 
-    const typed = typeOut(cn, Math.max(800, ab.duration * 1000));
-    await playBuffer(ab);
+    const typed = typeOut(cn, ab ? Math.max(800, ab.duration * 1000)
+                                 : Math.max(1200, cn.length * 90));
+    if (ab) await playBuffer(ab);
     await typed;
   } finally {
     // 只有「最新这一句」才归它关灯：上一句被新的一句接替时，
@@ -820,17 +854,18 @@ async function turn(fetchCall) {
     console.error(e);
     JP.textContent = '';
     CN.innerHTML = '<span class="err">没接上话：' + esc(e.message) +
-      '<br>脑子/嗓子没起来的话，先双击 开千岁.bat，等窗口自己弹出来。</span>';
+      '<br>看看 config.json 里的模型地址和钥匙填对了没。</span>';
   }
 }
 
 /* ── 按住说话 ─────────────────────────────────────── */
 
 let recording = false;
+let EARS_ON = true;          // checkStatus() 会按 /api/status 改它
 const TALK = $('#talk');
 
 async function recStart() {
-  if (recording) return;
+  if (!EARS_ON || recording) return;
   recording = true;
   TALK.classList.add('on');
   TALK.textContent = '松开发送';

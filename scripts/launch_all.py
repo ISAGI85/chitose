@@ -23,11 +23,58 @@ import urllib.request
 sys.stdout.reconfigure(encoding='utf-8', errors='replace')
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-GSV = r'D:/chitose/tools/GPT-SoVITS-v2pro-20250604-nvidia50'
+ROOT = os.path.dirname(HERE)
+# 谁在跑这个脚本就用谁的 python——宝宝用的是 venv，别人也一样。
+VENV_PY = sys.executable
+
+
+def _find_gsv():
+    """找 GPT-SoVITS 整合包。
+
+    顺序：环境变量 CHITOSE_GSV_DIR > tools/ 下以 GPT-SoVITS 开头的目录。
+    这样整合包叫 `GPT-SoVITS-v2pro` 还是宝宝这个长名字都能认出来。
+    """
+    p = (os.environ.get('CHITOSE_GSV_DIR') or '').strip()
+    if p and os.path.isdir(p):
+        return p
+    tools = os.path.join(ROOT, 'tools')
+    if os.path.isdir(tools):
+        for n in sorted(os.listdir(tools)):
+            d = os.path.join(tools, n)
+            if n.lower().startswith('gpt-sovits') and os.path.isdir(d):
+                return d
+    return os.path.join(tools, 'GPT-SoVITS-v2pro')
+
+
+def _find_weight(subdir, pattern, default):
+    """权重文件可以改名，按通配找；找不到再退回原来的文件名。"""
+    import glob
+    hits = sorted(glob.glob(os.path.join(GSV, subdir, pattern)))
+    if hits:
+        return os.path.relpath(hits[0], GSV)
+    return os.path.join(subdir, default)
+
+
+def _voice_enabled():
+    """这台机器要不要出声（和 chitose_chat.voice_enabled 同一套规则）。"""
+    env = (os.environ.get('CHITOSE_VOICE') or '').strip().lower()
+    if env in ('off', '0', 'false', 'no'):
+        return False
+    if env in ('on', '1', 'true', 'yes'):
+        return True
+    try:
+        import json
+        with open(os.path.join(ROOT, 'config.json'), encoding='utf-8') as f:
+            v = (json.load(f) or {}).get('voice') or {}
+        return v.get('enabled') is not False
+    except Exception:
+        return True
+
+
+GSV = _find_gsv()
 GSV_PY = os.path.join(GSV, 'runtime', 'python.exe')
-VENV_PY = r'D:/chitose/venv/Scripts/python.exe'
-SOVITS = 'SoVITS_weights_v2Pro/chitose_e10_s6600.pth'
-GPT = 'GPT_weights_v2Pro/chitose-e9.ckpt'
+SOVITS = _find_weight('SoVITS_weights_v2Pro', 'chitose*.pth', 'chitose_e10_s6600.pth')
+GPT = _find_weight('GPT_weights_v2Pro', 'chitose*.ckpt', 'chitose-e9.ckpt')
 GSV_PORT, SHIM_PORT = 9881, 9882
 NEW_CONSOLE = 0x00000010        # 让服务各自开一个窗口，出错能看见
 
@@ -234,7 +281,7 @@ def check():
         return False
     import soundfile as sf
     x, sr = sf.read(io.BytesIO(raw), dtype='float32')
-    out = os.path.join(r'D:/chitose/out', 'launch_check.wav')
+    out = os.path.join(ROOT, 'out', 'launch_check.wav')
     with open(out, 'wb') as f:
         f.write(raw)
     print('  成功：%.1f 秒 / %d Hz / %.0f 秒合成完' % (len(x) / sr, sr, time.time() - t0))
@@ -252,12 +299,17 @@ def main():
     ap.add_argument('--ui', action='store_true',
                     help='开千岁的窗口（app/server.py），不是控制台')
     ap.add_argument('--skip-services', action='store_true')
+    ap.add_argument('--no-voice', action='store_true',
+                    help='静音版：不叫嗓子和转接头，直接开界面')
     # 宝宝 2026-10-10 晚试完新嘴，说「新的不行」，换回老的 GPT-SoVITS。
     # 所以默认改回 gsv；想再试新的就 --mouth qwen。
     ap.add_argument('--mouth', choices=['qwen', 'gsv'], default='gsv',
                     help='gsv=老的 GPT-SoVITS（默认，宝宝挑的）'
                          ' / qwen=Qwen3-TTS 那套')
     args = ap.parse_args()
+
+    # 哪些情况算「静音版」：命令行喊了 --no-voice，或者 config.json 写着 voice.enabled=false。
+    silent = args.no_voice or not _voice_enabled()
 
     if args.stop:
         print('=== 关千岁 ===')
@@ -267,6 +319,9 @@ def main():
 
     if args.skip_services:
         ok = True
+    elif silent:
+        ok = True
+        print('=== 静音版：只开界面，不叫嗓子 ===')
     else:
         print('=== 叫千岁起床 ===')
         ok = True
@@ -287,6 +342,9 @@ def main():
 
     print()
     if args.check:
+        if silent:
+            print('静音版没有嗓子可查。想验证声音，先把 config.json 的 voice.enabled 改成 true。')
+            return
         check()
         print()
         print('服务留着没关。要关就 python launch_all.py --stop')
@@ -297,10 +355,9 @@ def main():
         print('=== 千岁，开窗 ===')
         print('（她会先按现在的钟点跟你打个招呼。窗口关掉就是退出。）')
         print()
-        ui = os.path.join(os.path.dirname(HERE), 'app', 'server.py')
+        ui = os.path.join(ROOT, 'app', 'server.py')
         try:
-            subprocess.call([VENV_PY, '-X', 'utf8', ui],
-                            cwd=os.path.dirname(HERE))
+            subprocess.call([VENV_PY, '-X', 'utf8', ui], cwd=ROOT)
         except KeyboardInterrupt:
             pass
         print()
@@ -319,7 +376,7 @@ def main():
         if getattr(args, name):
             cmd.append('--' + name)
     try:
-        subprocess.call(cmd, cwd=os.path.dirname(HERE))
+        subprocess.call(cmd, cwd=ROOT)
     except KeyboardInterrupt:
         pass
     print()

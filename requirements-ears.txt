@@ -1,0 +1,5 @@
+# 可选：想「按住说话」才装这一份
+# 装之前先确认已经装过 requirements.txt
+-r requirements.txt
+sounddevice>=0.4.6
+faster-whisper>=1.0.0

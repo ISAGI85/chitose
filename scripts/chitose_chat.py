@@ -20,10 +20,35 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 sys.stdout.reconfigure(encoding='utf-8', errors='replace')
 
 import numpy as np
-import sounddevice as sd
 import soundfile as sf
 
+# 耳朵（麦克风 + 语音识别）是可选的：没装也能打字聊天。
+try:
+    import sounddevice as sd
+except Exception:          # 没装 sounddevice，或者机器上没有声卡
+    sd = None
+
 import sfx
+
+ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
+
+# ── 本地配置 ────────────────────────────────────────────────
+# config.json 不进仓库（里面是宝宝自己的钥匙）。
+# 陌生人从 config.example.json 复制一份出来改。
+def _load_config():
+    p = os.path.join(ROOT, 'config.json')
+    try:
+        with open(p, encoding='utf-8') as f:
+            return json.load(f) or {}
+    except Exception:
+        return {}
+
+
+CONFIG = _load_config()
+BRAIN_CFG = CONFIG.get('brain') or {}
+VOICE_CFG = CONFIG.get('voice') or {}
+EARS_CFG = CONFIG.get('ears') or {}
 
 SHIM = 'http://127.0.0.1:9882/v1/audio/speech'
 OLLAMA = 'http://127.0.0.1:11434/api/chat'
@@ -32,6 +57,14 @@ OLLAMA = 'http://127.0.0.1:11434/api/chat'
 BRAIN_URL = os.environ.get('CHITOSE_BRAIN_URL', 'http://127.0.0.1:15721/v1/messages')
 LLM_MODEL = os.environ.get('CHITOSE_LLM', 'gemma3:4b')
 
+
+def _full_api_url(u):
+    """config 里可以只写 /v1 那一层，也可以写完整地址，两种都认。"""
+    u = (u or '').strip().rstrip('/')
+    if not u:
+        return ''
+    return u if u.endswith('/chat/completions') else u + '/chat/completions'
+
 # ── 2026-10-26 加：外脑代理没起来时的直连通道 ─────────────────────
 # 症状：窗口开着、嗓子也通（9881/9882 都在），但一说就报
 #       「没接上话：HTTP Error 404: Not Found」。
@@ -39,10 +72,15 @@ LLM_MODEL = os.environ.get('CHITOSE_LLM', 'gemma3:4b')
 #       gemma3:4b（只有 qwen3-vl:8b）→ Ollama 回 404 model not found。
 # 所以加一条「直连」：用本机已经存着的百炼钥匙直接敲 DashScope 的
 # OpenAI 兼容端点（和姐姐我同款模型）。代理起来了还会优先走代理。
-BAILIAN_URL = os.environ.get(
-    'CHITOSE_BAILIAN_URL',
-    'https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions')
-BAILIAN_MODEL = os.environ.get('CHITOSE_BAILIAN_MODEL', 'deepseek-v4.1-flash-1017')
+# config.json 里填了 brain.base_url 就用它（任何 OpenAI 兼容端点都行）。
+# 没填就还走宝宝这台的老路子（代理 → DashScope 直连 → Ollama）。
+BAILIAN_URL = _full_api_url(
+    os.environ.get('CHITOSE_BAILIAN_URL')
+    or BRAIN_CFG.get('base_url')
+    or 'https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions')
+BAILIAN_MODEL = os.environ.get(
+    'CHITOSE_BAILIAN_MODEL',
+    BRAIN_CFG.get('model') or 'deepseek-v4.1-flash-1017')
 _BAILIAN_KEY = None
 _brain_remote = True
 # 外脑断了不是死刑：过一会儿再试一次。
@@ -50,9 +88,54 @@ _brain_remote = True
 # 窗口比代理早起三秒，这窗口就永远用笨嘴说话，还报 404。
 _brain_retry_at = 0.0
 BRAIN_RETRY_S = 30.0
-WHISPER_DIR = r'D:/chitose/tools/whisper'
-OUT_DIR = r'D:/chitose/out/chat'
+WHISPER_DIR = os.environ.get('CHITOSE_WHISPER_DIR',
+                             os.path.join(ROOT, 'tools', 'whisper'))
+OUT_DIR = os.path.join(ROOT, 'out', 'chat')
 SR = 16000
+
+
+def voice_enabled():
+    """这台机器要不要出声。
+
+    优先级：环境变量 > config.json 的 voice.enabled > 老行为（开）。
+    陌生人复制出来的 config.example.json 里写的是 false，所以他们默认静音。
+    """
+    env = (os.environ.get('CHITOSE_VOICE') or '').strip().lower()
+    if env in ('off', '0', 'false', 'no'):
+        return False
+    if env in ('on', '1', 'true', 'yes'):
+        return True
+    return VOICE_CFG.get('enabled') is not False
+
+
+def brain_configured():
+    """有没有可以用的脑子。
+
+    宝宝这台：代理在 15721，或者有百炼钥匙。
+    陌生人：要自己在 config.json 里填 brain.base_url + api_key。
+    """
+    if (BRAIN_CFG.get('base_url') or '').strip():
+        return True
+    if _bailian_key():
+        return True
+    try:
+        import socket
+        with socket.socket() as s:
+            s.settimeout(0.3)
+            return s.connect_ex(('127.0.0.1', 15721)) == 0
+    except Exception:
+        return False
+
+
+def ears_available():
+    """耳朵装没装：sounddevice + faster-whisper + 模型目录，三样都要有。"""
+    if sd is None:
+        return False
+    try:
+        import faster_whisper  # noqa: F401
+    except Exception:
+        return False
+    return os.path.isdir(WHISPER_DIR)
 
 SYSTEM = """你是茑町千岁，宝宝的青梅竹马大姐姐，比宝宝大几岁。
 
@@ -132,12 +215,16 @@ def log(msg):
 
 
 def play(x, sr):
+    if sd is None:
+        return
     sd.play(x, sr)
     sd.wait()
 
 
 def record_until(stop_event):
-    """录到 stop_event 被设置为止。"""
+    """录到 stop_event 被设置为止。没装耳朵就返回一段静音。"""
+    if sd is None:
+        return np.zeros(0, dtype='float32')
     q = queue.Queue()
     frames = []
 
@@ -204,12 +291,15 @@ def _chat_ollama(sysm, user, temp=0.8, npred=150, history=None):
 
 
 def _bailian_key():
-    """从环境变量或姐姐我的凭据文件里拿钥匙（不打印、不外传）。"""
+    """从环境变量、config.json 或本机凭据文件里拿钥匙（不打印、不外传）。"""
     global _BAILIAN_KEY
     if _BAILIAN_KEY:
         return _BAILIAN_KEY
-    k = (os.environ.get('CHITOSE_BAILIAN_KEY') or '').strip()
+    k = (os.environ.get('CHITOSE_BAILIAN_KEY')
+         or (BRAIN_CFG.get('api_key') or '')).strip()
     if not k:
+        # 宝宝这台的老路子：本机凭据文件。陌生人的电脑上没有这个文件，
+        # 所以他们必须自己在 config.json 里填 api_key。
         try:
             p = os.path.join(os.path.expanduser('~'), '.dsh', '.credentials.yaml')
             with open(p, encoding='utf-8') as f:
@@ -224,19 +314,23 @@ def _bailian_key():
 
 
 def _chat_direct(sysm, user, temp=0.9, npred=300, history=None):
-    """直连 DashScope（OpenAI 兼容）。代理不在时顶上去。"""
+    """直连一个 OpenAI 兼容端点（DashScope / DeepSeek / Ollama 都行）。"""
     key = _bailian_key()
-    if not key:
+    if not key and 'dashscope' in BAILIAN_URL:
         raise RuntimeError('没有可用的钥匙')
     msgs = [{'role': 'system', 'content': sysm}]
     msgs += list(history or [])
     msgs.append({'role': 'user', 'content': user})
     payload = {'model': BAILIAN_MODEL, 'messages': msgs, 'max_tokens': npred,
-               'temperature': temp, 'enable_thinking': False}
+               'temperature': temp}
+    # DashScope 的思考开关；别的端点不认这个参数，别乱塞。
+    if 'dashscope' in BAILIAN_URL:
+        payload['enable_thinking'] = False
+    headers = {'Content-Type': 'application/json'}
+    if key:
+        headers['Authorization'] = 'Bearer ' + key
     req = urllib.request.Request(
-        BAILIAN_URL, data=json.dumps(payload).encode('utf-8'),
-        headers={'Content-Type': 'application/json',
-                 'Authorization': 'Bearer ' + key})
+        BAILIAN_URL, data=json.dumps(payload).encode('utf-8'), headers=headers)
     with urllib.request.urlopen(req, timeout=180) as r:
         d = json.loads(r.read().decode('utf-8'))
     txt = (d['choices'][0]['message'].get('content') or '').strip()
@@ -290,9 +384,15 @@ def ask_llm(history, user_text):
         tags, cn_clean = sfx.parse_tags(cn)
     if not cn.strip() or not cn_clean:
         raise RuntimeError('她刚才没说出话，再说一次试试')
-    jp = _chat(TRANSLATE_SYS, cn_clean, temp=0.2, npred=900)
-    if tags:
-        jp = ''.join('[%s]' % t for t in tags) + jp
+    # 静音版不需要日语——省一次模型调用，也让没声音的人等得短一点。
+    jp = ''
+    if voice_enabled():
+        try:
+            jp = _chat(TRANSLATE_SYS, cn_clean, temp=0.2, npred=900)
+        except Exception as e:
+            log('  （日语翻不出来，这句就先只有中文：%s）' % str(e)[:60])
+        if tags and jp:
+            jp = ''.join('[%s]' % t for t in tags) + jp
     return cn, jp, tags
 
 
@@ -317,14 +417,18 @@ def one_turn(audio, history):
     log('千岁：%s' % cn)
     log('     日语：%s' % jp)
 
-    tts_text = jp if len(jp) <= 120 else jp[:120]
-    wav = synth(tts_text)
-    os.makedirs(OUT_DIR, exist_ok=True)
-    path = os.path.join(OUT_DIR, time.strftime('turn_%H%M%S.wav'))
-    with open(path, 'wb') as f:
-        f.write(wav)
-    x, sr = sf.read(path, dtype='float32')
-    play(x, sr)
+    if voice_enabled() and jp:
+        tts_text = jp if len(jp) <= 120 else jp[:120]
+        try:
+            wav = synth(tts_text)
+            os.makedirs(OUT_DIR, exist_ok=True)
+            path = os.path.join(OUT_DIR, time.strftime('turn_%H%M%S.wav'))
+            with open(path, 'wb') as f:
+                f.write(wav)
+            x, sr = sf.read(path, dtype='float32')
+            play(x, sr)
+        except Exception as e:
+            log('  （嗓子没接上，这句只打字：%s）' % str(e)[:60])
     log('  （共 %.1f 秒）' % (time.time() - t0))
 
     history.append({'role': 'user', 'content': user_text})

@@ -30,6 +30,9 @@ GSV_API = os.environ.get('GSV_API', 'http://127.0.0.1:9881/')
 PORT = int(os.environ.get('SHIM_PORT', '9882'))
 HOST = os.environ.get('SHIM_HOST', '127.0.0.1')
 
+ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+REF_DIR = os.environ.get('GSV_REF_DIR', os.path.join(ROOT, 'ref_wav'))
+
 # 参考音频。用她轻声安慰的那句当默认，出来最沉稳。
 #
 # 为什么要有好几条：GPT-SoVITS 的语气是**从参考音频带过来的**。
@@ -39,10 +42,11 @@ HOST = os.environ.get('SHIM_HOST', '127.0.0.1')
 # 2026-10-10 宝宝在四条候选里挑的第 1（平静）和第 3（轻快）。
 REFS = {
     '平静': (os.environ.get('GSV_REF',
-                          r'D:/chitose/ref_wav/calm/CC_02_cit_mo_05_003.wav'),
+                          os.path.join(REF_DIR, 'calm', 'CC_02_cit_mo_05_003.wav')),
              os.environ.get('GSV_REF_TEXT', 'うん、大丈夫、難しいことじゃないから。'),
              'ja'),
-    '开心': (r'D:/chitose/ref_wav/cheer/cheer_01.wav',
+    '开心': (os.environ.get('GSV_REF_CHEER',
+                          os.path.join(REF_DIR, 'cheer', 'cheer_01.wav')),
              'やった!それじゃあ早速するね', 'ja'),
 }
 # 心情标注 -> 用哪条参考。没列到的（叹气/难过…）先用平静的，
