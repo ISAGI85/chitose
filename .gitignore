@@ -31,6 +31,13 @@ config.json
 # 开场问候是千岁本人的声音，不公开
 app/web/assets/voice/
 
+# ── 作者自用的启动脚本，不进公开仓库 ──────
+# 陌生人只用 setup.bat / start.bat / start-voice.bat
+/开千岁.bat
+/关千岁.bat
+/打字找千岁.bat
+/run-ui.cmd
+
 # ── 系统垃圾 ──────────────────────────────
 .DS_Store
 Thumbs.db
