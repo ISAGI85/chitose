@@ -1,0 +1,224 @@
+<!doctype html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<title>摆脸</title>
+<style>
+  :root{
+    --night:#241C1E; --room:#3A2E33; --lamp:#E0A96D;
+    --fuji:#B99BD1; --paper:#F5EFE9; --ink:#9C8B92;
+  }
+  *{box-sizing:border-box;-webkit-user-select:none;user-select:none}
+  html,body{margin:0;height:100%;background:var(--night);color:var(--paper);
+            font-family:"Yu Gothic UI","Microsoft YaHei UI",system-ui,sans-serif;
+            overflow:hidden}
+  #wrap{position:absolute;inset:0 0 150px 0;overflow:hidden;background:#15100f;
+        cursor:grab}
+  #wrap.drag{cursor:grabbing}
+  #body,#face{position:absolute;-webkit-user-drag:none;pointer-events:none}
+  #face{outline:1px solid rgba(224,169,109,.6)}
+  /* 姐姐从身体原图上量出来的脸部范围（身体坐标 x 420~740, y 155~445）。
+     放五官的时候照着这个框放，眼睛在框的上半、嘴在下缘。 */
+  #guide{position:absolute;border:1px dashed rgba(185,155,209,.75);
+         border-radius:50% 50% 46% 46%;pointer-events:none}
+  #readout{position:absolute;top:10px;left:14px;font-size:12.5px;color:var(--fuji);
+           background:rgba(36,28,30,.85);padding:5px 11px;border-radius:3px;
+           font-family:ui-monospace,Consolas,monospace}
+  #hud{position:absolute;left:0;right:0;bottom:0;height:150px;background:var(--room);
+       border-top:1px solid rgba(185,155,209,.25);padding:8px 12px;
+       display:flex;flex-direction:column;gap:6px}
+  .row{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+  button{background:#2b2226;color:var(--paper);border:1px solid #4a3c42;
+         border-radius:4px;padding:6px 11px;font-size:13px;cursor:pointer;
+         font-family:inherit}
+  button:hover{background:#3a2f34;border-color:var(--fuji)}
+  button.on{border-color:var(--lamp);color:var(--lamp)}
+  button.big{font-size:16px;min-width:40px;padding:6px 0}
+  button.save{border-color:var(--lamp);color:var(--lamp);font-weight:600}
+  .lbl{font-size:12px;color:var(--ink);margin-right:2px}
+  #flash{position:absolute;top:10px;right:14px;font-size:13px;color:var(--lamp);
+         opacity:0;transition:opacity .25s;background:rgba(36,28,30,.85);
+         padding:5px 11px;border-radius:3px}
+</style>
+</head>
+<body>
+
+<div id="wrap">
+  <img id="body" src="/assets/StChit01LL_c.png" alt="">
+  <div id="guide"></div>
+  <img id="face" src="/assets/Stchit01LL_00000c.png" alt="">
+</div>
+<div id="readout"></div>
+<div id="flash">已保存</div>
+
+<div id="hud">
+  <div class="row">
+    <span class="lbl">挪 (或者直接在画面上拖动)</span>
+    <button class="big" data-mv="0,-1">↑</button>
+    <button class="big" data-mv="-1,0">←</button>
+    <button class="big" data-mv="0,1">↓</button>
+    <button class="big" data-mv="1,0">→</button>
+    <span class="lbl" style="margin-left:10px">缩放</span>
+    <button class="big" data-sc="1">＋</button>
+    <button class="big" data-sc="-1">－</button>
+    <span class="lbl" style="margin-left:10px">微调</span>
+    <button data-mv="0,-1" data-fine="1">↑细</button>
+    <button data-mv="-1,0" data-fine="1">←细</button>
+    <button data-mv="0,1" data-fine="1">↓细</button>
+    <button data-mv="1,0" data-fine="1">→细</button>
+  </div>
+  <div class="row" id="faces"></div>
+  <div class="row">
+    <button class="save" data-do="save">保存 (S)</button>
+    <button data-do="reset">复位 (R)</button>
+    <button data-do="body">换衣服 (B)</button>
+    <button data-do="guide">参考框 (G)</button>
+    <span class="lbl" id="hint" style="margin-left:6px"></span>
+  </div>
+</div>
+
+<script>
+const FACES = [
+  ['Stchit01LL_00000c.png','0c 睁眼抿嘴（平时）'],
+  ['Stchit01LL_000002.png','02 闭眼（眨眼）'],
+  ['Stchit01LL_00000d.png','0d 圆张嘴（说话）'],
+  ['Stchit01LL_00000h.png','0h 张嘴微笑（说话）'],
+  ['Stchit01LL_00000b.png','0b 睁眼微笑'],
+  ['Stchit01LL_00000e.png','0e 睁眼小嘴'],
+  ['Stchit01LL_00000f.png','0f 闭眼小嘴'],
+  ['Stchit01LL_00000g.png','0g 闭眼张嘴'],
+  ['Stchit01LL_00000i.png','0i 闭眼大张嘴'],
+  ['Stchit01LL_000001.png','01 惊讶脸'],
+];
+const BODIES = ['StChit01LL_c.png','StChit01LL_a.png'];
+const BODY_W = 1343, BODY_H = 3723;
+// OFFY 给负数 = 在她头顶上面留出空间。
+// 她头发的最高点在原图第 1 行，OFFY=0 的话头顶正好贴着窗口上沿，
+// 会被标题栏切掉，看着像「头顶被抹了」。
+const VIEW = 0.88, OFFX = 250, OFFY = -110;
+
+let st = { cx: 580, cy: 300, scale: 1.0 };
+let fi = 0, bi = 0, guideOn = true;
+const DEF = { ...st };
+const $ = id => document.getElementById(id);
+const bodyEl = $('body'), faceEl = $('face'), wrapEl = $('wrap');
+
+function render(){
+  bodyEl.style.width  = (BODY_W * VIEW) + 'px';
+  bodyEl.style.height = (BODY_H * VIEW) + 'px';
+  bodyEl.style.left = (-OFFX * VIEW) + 'px';
+  bodyEl.style.top  = (-OFFY * VIEW) + 'px';
+
+  // 脸部参考框（姐姐从身体原图量的 x 420~740, y 155~445）
+  const g = $('guide');
+  g.style.left   = ((420 - OFFX) * VIEW) + 'px';
+  g.style.top    = ((155 - OFFY) * VIEW) + 'px';
+  g.style.width  = (320 * VIEW) + 'px';
+  g.style.height = (290 * VIEW) + 'px';
+  g.style.display = guideOn ? 'block' : 'none';
+
+  const w = faceEl.naturalWidth || 336, h = faceEl.naturalHeight || 262;
+  const dw = w * st.scale * VIEW, dh = h * st.scale * VIEW;
+  faceEl.style.width  = dw + 'px';
+  faceEl.style.height = dh + 'px';
+  faceEl.style.left = ((st.cx - OFFX) * VIEW - dw / 2) + 'px';
+  faceEl.style.top  = ((st.cy - OFFY) * VIEW - dh / 2) + 'px';
+
+  $('readout').innerHTML =
+    '中心 x <b>' + Math.round(st.cx) + '</b> &nbsp; y <b>' + Math.round(st.cy) +
+    '</b> &nbsp;·&nbsp; 缩放 <b>' + st.scale.toFixed(3) + '</b>' +
+    ' &nbsp;·&nbsp; ' + w + '×' + h + ' &nbsp;·&nbsp; <b>v2</b>';
+  $('hint').textContent = FACES[fi][1];
+}
+function setFace(i){
+  fi = (i + FACES.length) % FACES.length;
+  faceEl.src = '/assets/' + FACES[fi][0];
+  [...$('faces').children].forEach((b, n) => b.classList.toggle('on', n === fi));
+}
+faceEl.addEventListener('load', render);
+
+// 按钮
+$('faces').innerHTML = FACES.map((f, n) =>
+  '<button data-face="' + n + '">' + (n + 1) + '</button>').join('');
+document.addEventListener('click', e => {
+  const b = e.target.closest('button');
+  if (!b) return;
+  if (b.dataset.face !== undefined) { setFace(+b.dataset.face); return; }
+  if (b.dataset.mv){
+    const fine = b.dataset.fine ? 0.2 : 1;
+    const [dx, dy] = b.dataset.mv.split(',').map(Number);
+    st.cx += dx * fine; st.cy += dy * fine;
+  } else if (b.dataset.sc){
+    st.scale *= b.dataset.sc > 0 ? 1.01 : 1 / 1.01;
+    st.scale = Math.min(3, Math.max(0.3, st.scale));
+  } else if (b.dataset.do === 'save'){ save(); return; }
+  else if (b.dataset.do === 'reset'){ st = { ...DEF }; }
+  else if (b.dataset.do === 'guide'){ guideOn = !guideOn; }
+  else if (b.dataset.do === 'body'){
+    bi = (bi + 1) % BODIES.length; bodyEl.src = '/assets/' + BODIES[bi]; return;
+  }
+  render();
+});
+
+// 鼠标拖动
+let drag = null;
+wrapEl.addEventListener('mousedown', e => {
+  drag = { x: e.clientX, y: e.clientY, cx: st.cx, cy: st.cy };
+  wrapEl.classList.add('drag');
+  e.preventDefault();
+});
+addEventListener('mousemove', e => {
+  if (!drag) return;
+  st.cx = drag.cx + (e.clientX - drag.x) / VIEW;
+  st.cy = drag.cy + (e.clientY - drag.y) / VIEW;
+  render();
+});
+addEventListener('mouseup', () => { drag = null; wrapEl.classList.remove('drag'); });
+
+// 键盘（窗口拿到焦点时也能用）
+addEventListener('keydown', e => {
+  const step = e.shiftKey ? 10 : 1, k = e.key;
+  if (k === 'ArrowUp') st.cy -= step;
+  else if (k === 'ArrowDown') st.cy += step;
+  else if (k === 'ArrowLeft') st.cx -= step;
+  else if (k === 'ArrowRight') st.cx += step;
+  else if (k === '+' || k === '=') st.scale *= 1.01;
+  else if (k === '-' || k === '_') st.scale /= 1.01;
+  else if (k >= '1' && k <= '9') setFace(+k - 1);
+  else if (k === '0') setFace(9);
+  else if (k === 'r' || k === 'R') st = { ...DEF };
+  else if (k === 'g' || k === 'G') { guideOn = !guideOn; }
+  else if (k === 's' || k === 'S') { save(); return; }
+  else if (k === 'b' || k === 'B') {
+    bi = (bi + 1) % BODIES.length; bodyEl.src = '/assets/' + BODIES[bi]; return;
+  }
+  else return;
+  e.preventDefault();
+  render();
+});
+
+addEventListener('wheel', e => {
+  st.scale *= e.deltaY < 0 ? 1.01 : 1 / 1.01;
+  st.scale = Math.min(3, Math.max(0.3, st.scale));
+  e.preventDefault();
+  render();
+}, { passive: false });
+
+async function save(){
+  const r = await fetch('/save', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(st),
+  });
+  if (r.ok){ const f = $('flash'); f.style.opacity = 1;
+             setTimeout(() => f.style.opacity = 0, 900); }
+}
+
+fetch('/load').then(r => r.json()).then(v => {
+  if (typeof v.cx === 'number') st = { cx: v.cx, cy: v.cy, scale: v.scale ?? 1 };
+  render();
+  setFace(0);
+});
+render();
+</script>
+</body>
+</html>

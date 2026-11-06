@@ -1,0 +1,412 @@
+{
+ "version": 1793198578,
+ "body": {
+  "w": 1343,
+  "h": 3723
+ },
+ "layers": {
+  "mouth.cover": {
+   "file": "mouth_cover.png",
+   "w": 97,
+   "h": 65,
+   "x": 664,
+   "y": 337
+  },
+  "mouth.open_surprise": {
+   "file": "mouth_surprise.png",
+   "w": 62,
+   "h": 60,
+   "x": 682,
+   "y": 338
+  },
+  "mouth.cover_surprise": {
+   "file": "mouth_cover_surprise.png",
+   "w": 82,
+   "h": 80,
+   "x": 672,
+   "y": 328
+  },
+  "mouth.open_talk_a": {
+   "file": "mouth_face_talk_a.png",
+   "w": 69,
+   "h": 67,
+   "x": 681,
+   "y": 340
+  },
+  "mouth.cover_talk_a": {
+   "file": "mouth_cover_face_talk_a.png",
+   "w": 69,
+   "h": 67,
+   "x": 681,
+   "y": 340
+  },
+  "mouth.open_tereb": {
+   "file": "mouth_face_tereb.png",
+   "w": 106,
+   "h": 46,
+   "x": 665,
+   "y": 346
+  },
+  "mouth.cover_tereb": {
+   "file": "mouth_cover_face_tereb.png",
+   "w": 106,
+   "h": 46,
+   "x": 665,
+   "y": 346
+  },
+  "mouth.open_wow": {
+   "file": "mouth_face_wow.png",
+   "w": 145,
+   "h": 98,
+   "x": 666,
+   "y": 323
+  },
+  "mouth.cover_wow": {
+   "file": "mouth_cover_face_wow.png",
+   "w": 145,
+   "h": 98,
+   "x": 666,
+   "y": 323
+  },
+  "mouth.open_blink_talk": {
+   "file": "mouth_face_blink_talk.png",
+   "w": 55,
+   "h": 44,
+   "x": 688,
+   "y": 350
+  },
+  "mouth.cover_blink_talk": {
+   "file": "mouth_cover_face_blink_talk.png",
+   "w": 55,
+   "h": 44,
+   "x": 688,
+   "y": 350
+  },
+  "mouth.open_shout": {
+   "file": "mouth_face_shout.png",
+   "w": 96,
+   "h": 102,
+   "x": 669,
+   "y": 326
+  },
+  "mouth.cover_shout": {
+   "file": "mouth_cover_face_shout.png",
+   "w": 96,
+   "h": 102,
+   "x": 669,
+   "y": 326
+  },
+  "mouth.open_talk_b": {
+   "file": "mouth_face_talk_b.png",
+   "w": 94,
+   "h": 43,
+   "x": 665,
+   "y": 339
+  },
+  "mouth.cover_talk_b": {
+   "file": "mouth_cover_face_talk_b.png",
+   "w": 94,
+   "h": 43,
+   "x": 665,
+   "y": 339
+  },
+  "mouth.cover_smile": {
+   "file": "mouth_cover_smile.png",
+   "w": 96,
+   "h": 58,
+   "x": 664,
+   "y": 331
+  },
+  "mouth.open_smile": {
+   "file": "face_blink_talk_mouth.png",
+   "w": 55,
+   "h": 44,
+   "x": 684,
+   "y": 338
+  },
+  "body": {
+   "file": "body_c.png",
+   "thumb": "body_c_s.png",
+   "w": 1343,
+   "h": 3723,
+   "x": 0,
+   "y": 0
+  },
+  "hair": {
+   "file": "Stchit01LL_0001.png",
+   "w": 655,
+   "h": 1072,
+   "x": 349,
+   "y": -160
+  },
+  "hair.alt": {
+   "file": "Stchit01LL_0002.png",
+   "w": 741,
+   "h": 1115,
+   "x": 326,
+   "y": -203
+  },
+  "face.blink_talk": {
+   "file": "Stchit01LL_00000f.png",
+   "w": 317,
+   "h": 277,
+   "x": 531,
+   "y": 115
+  },
+  "face.talk_a": {
+   "file": "Stchit01LL_00000d.png",
+   "w": 333,
+   "h": 308,
+   "x": 524,
+   "y": 98
+  },
+  "face.talk_b": {
+   "file": "Stchit01LL_00000h.png",
+   "w": 336,
+   "h": 257,
+   "x": 527,
+   "y": 125
+  },
+  "face.smile": {
+   "file": "Stchit01LL_00000b.png",
+   "w": 339,
+   "h": 261,
+   "x": 524,
+   "y": 116
+  },
+  "face.shut_smile": {
+   "file": "Stchit01LL_00000g.png",
+   "w": 319,
+   "h": 257,
+   "x": 534,
+   "y": 125
+  },
+  "face.tereb": {
+   "file": "Stchit01LL_00000k.png",
+   "w": 333,
+   "h": 288,
+   "x": 524,
+   "y": 101
+  },
+  "face.shout": {
+   "file": "Stchit01LL_00000u.png",
+   "w": 329,
+   "h": 309,
+   "x": 524,
+   "y": 116
+  },
+  "face.cry": {
+   "file": "Stchit01LL_00000v.png",
+   "w": 336,
+   "h": 327,
+   "x": 528,
+   "y": 115
+  },
+  "face.wow": {
+   "file": "Stchit01LL_00000y.png",
+   "w": 898,
+   "h": 287,
+   "x": 231,
+   "y": 130
+  },
+  "face.surprise": {
+   "file": "Stchit01LL_00000e.png",
+   "w": 333,
+   "h": 287,
+   "x": 524,
+   "y": 91
+  },
+  "face.serious": {
+   "file": "Stchit01LL_00000t.png",
+   "w": 336,
+   "h": 237,
+   "x": 527,
+   "y": 141
+  },
+  "face.ahaa": {
+   "file": "Stchit01LL_00000s.png",
+   "w": 329,
+   "h": 277,
+   "x": 534,
+   "y": 125
+  },
+  "face.question": {
+   "file": "Stchit01LL_000001.png",
+   "w": 611,
+   "h": 593,
+   "x": 228,
+   "y": -204
+  },
+  "face.shut_open": {
+   "file": "Stchit01LL_00000i.png",
+   "w": 319,
+   "h": 277,
+   "x": 534,
+   "y": 125
+  },
+  "blush.light": {
+   "file": "Stchit01LL_002.png",
+   "w": 364,
+   "h": 182,
+   "x": 510,
+   "y": 181
+  },
+  "blush.heavy": {
+   "file": "Stchit01LL_003.png",
+   "w": 539,
+   "h": 419,
+   "x": 418,
+   "y": 27
+  },
+  "face.idle": {
+   "file": "idle_face.png",
+   "w": 336,
+   "h": 259,
+   "x": 528,
+   "y": 123
+  },
+  "face.blink": {
+   "file": "blink_idle_mouth.png",
+   "w": 319,
+   "h": 257,
+   "x": 534,
+   "y": 125
+  },
+  "face.shy": {
+   "file": "shy_face.png",
+   "w": 843,
+   "h": 625,
+   "x": 234,
+   "y": -196
+  },
+  "mouth.open": {
+   "file": "face_shut_open_mouth.png",
+   "w": 97,
+   "h": 65,
+   "x": 664,
+   "y": 337
+  },
+  "eyes.idle": {
+   "file": "eyes_idle.png",
+   "w": 331,
+   "h": 106,
+   "x": 529,
+   "y": 185
+  }
+ },
+ "bodies": {
+  "a": {
+   "file": "body_a.png",
+   "thumb": "body_a_s.png",
+   "w": 1343,
+   "h": 3659,
+   "x": 0,
+   "y": 0
+  },
+  "b": {
+   "file": "body_b.png",
+   "thumb": "body_b_s.png",
+   "w": 1343,
+   "h": 3659,
+   "x": 0,
+   "y": 0
+  },
+  "c": {
+   "file": "body_c.png",
+   "thumb": "body_c_s.png",
+   "w": 1343,
+   "h": 3723,
+   "x": 0,
+   "y": 0
+  },
+  "d": {
+   "file": "body_d.png",
+   "thumb": "body_d_s.png",
+   "w": 1343,
+   "h": 3723,
+   "x": 0,
+   "y": 0
+  },
+  "e": {
+   "file": "body_e.png",
+   "thumb": "body_e_s.png",
+   "w": 1393,
+   "h": 3723,
+   "x": 0,
+   "y": 0
+  },
+  "f": {
+   "file": "body_f.png",
+   "thumb": "body_f_s.png",
+   "w": 1343,
+   "h": 3703,
+   "x": 0,
+   "y": 0
+  },
+  "g": {
+   "file": "body_g.png",
+   "thumb": "body_g_s.png",
+   "w": 1343,
+   "h": 3703,
+   "x": 0,
+   "y": 0
+  },
+  "h": {
+   "file": "body_h.png",
+   "thumb": "body_h_s.png",
+   "w": 1393,
+   "h": 3703,
+   "x": 0,
+   "y": 0
+  },
+  "i": {
+   "file": "body_i.png",
+   "thumb": "body_i_s.png",
+   "w": 1343,
+   "h": 3731,
+   "x": 0,
+   "y": 0
+  },
+  "j": {
+   "file": "body_j.png",
+   "thumb": "body_j_s.png",
+   "w": 1343,
+   "h": 3731,
+   "x": 0,
+   "y": 0
+  },
+  "k": {
+   "file": "body_k.png",
+   "thumb": "body_k_s.png",
+   "w": 1393,
+   "h": 3731,
+   "x": 0,
+   "y": 0
+  },
+  "l": {
+   "file": "body_l.png",
+   "thumb": "body_l_s.png",
+   "w": 1653,
+   "h": 3715,
+   "x": -129,
+   "y": 0
+  },
+  "m": {
+   "file": "body_m.png",
+   "thumb": "body_m_s.png",
+   "w": 887,
+   "h": 3659,
+   "x": 237,
+   "y": 0
+  },
+  "hood": {
+   "file": "body_hood.png",
+   "thumb": "body_hood_s.png",
+   "w": 1343,
+   "h": 3828,
+   "x": 0,
+   "y": -169,
+   "noHair": true
+  }
+ }
+}

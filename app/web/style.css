@@ -1,0 +1,361 @@
+/* 千岁的窗口。
+   配色取自她本人 + 冬夜的灯：夜 / 房间 / 灯 / 藤 / 纸 / 薄墨。
+   规矩：明朝体 = 她（台词、名字），黑体 = 机器（按钮、状态、报错）。 */
+
+:root{
+  --night:#241C1E;   /* 夜   底 */
+  --room:#3A2E33;    /* 房间 面板 */
+  --lamp:#E0A96D;    /* 灯   光、强调 */
+  --fuji:#B99BD1;    /* 藤   她的名字、次强调 */
+  --paper:#F5EFE9;   /* 纸   她说的话 */
+  --ink:#9C8B92;     /* 薄墨 界面 */
+
+  --mincho:"Noto Serif SC","Source Han Serif SC","Songti SC",SimSun,serif;
+  --gothic:"Microsoft YaHei UI","Yu Gothic UI",system-ui,sans-serif;
+
+  /* 立绘取景：她的身体轴线（身体坐标 x=695）落在窗口正中，
+     头顶离上沿 34px——姐姐比过三版，这版她够近、上面又留得住气。
+     要缩放只改 --s，取景不会歪。 */
+  --s:0.47;
+  --axis:695;
+}
+
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;overflow:hidden;background:var(--night);
+  color:var(--paper);-webkit-user-select:none;user-select:none;
+  font-family:var(--gothic)}
+img{-webkit-user-drag:none;user-drag:none}
+
+/* ── 和室 ───────────────────────────────────────────
+   背景是**游戏自己的图**：`bg05vb`，千岁那间和室的傍晚。
+   不自己画——画风跟她是同一套，怎么摆都不会打架。
+   （想换别的：`tmp/grab_bgs.py` 能按名字从 image00.int 里把背景揪出来，
+     1920×1080，改下面这一个 --room-img 就行。备选看过 bg05aa 白天 / bg05xa 夜里 / bg02w 雪夜の街。） */
+:root{--room-img:url(/assets/bg/bg05vb.jpg)}
+
+#room{position:absolute;inset:0;z-index:0;overflow:hidden;pointer-events:none;
+  background-color:#241C1E;
+  background-image:var(--room-img,none);
+  background-size:cover;
+  /* 姐姐按她那间屋子调的：让那扇纸拉窗正好落在她身后 */
+  background-position:58% 34%;
+  background-repeat:no-repeat}
+/* 把屋子压暗一层：她是主角，背景不能比她亮 */
+#room::after{content:"";position:absolute;inset:0;
+  background:rgba(36,28,30,.46)}
+
+/* ── 光 ─────────────────────────────────────────────
+   右上那盏灯，和左下一点藤色的反光。它是光源，不是描边。 */
+#lamp{position:absolute;inset:0;pointer-events:none;z-index:0;
+  opacity:0;transition:opacity 1.6s ease-out .15s;
+  background:
+    radial-gradient(62% 46% at 80% 1%, rgba(224,169,109,.20) 0%,
+                    rgba(224,169,109,.07) 42%, rgba(224,169,109,0) 74%),
+    radial-gradient(72% 52% at 14% 108%, rgba(185,155,209,.13) 0%,
+                    rgba(185,155,209,0) 66%);
+}
+body.ready #lamp{opacity:1}
+
+/* 四边压暗，让光更集中在她身上 */
+#vignette{position:absolute;inset:0;pointer-events:none;z-index:1;
+  background:radial-gradient(120% 92% at 62% 40%,
+    rgba(0,0,0,0) 42%, rgba(0,0,0,.34) 78%, rgba(0,0,0,.62) 100%)}
+
+/* ── 她 ─────────────────────────────────────────────
+   所有图层按 .hg3 文件头里的画布坐标摆（assets/layers.json），
+   姐姐不手打任何坐标。后发在身体后面，五官和脸红在身体前面。 */
+#pivot{position:absolute;left:50%;top:87px;width:0;height:0;z-index:2}
+#figure{position:absolute;left:calc(var(--axis) * -1px);top:0;
+  width:1343px;height:3723px;
+  transform:scale(var(--s)) rotate(calc(var(--gazeRot, 0) * 1deg));transform-origin:calc(var(--axis) * 1px) 0;
+  opacity:0;transition:opacity .9s ease-out;}
+body.ready #figure{opacity:1}
+#breathe{position:absolute;inset:0;transform-origin:50% 100%}
+/* 她挡住的屋里光：一团很软的暗，落在身后的障子上，往左下偏 */
+#castShadow{position:absolute;left:300px;top:120px;width:820px;height:3500px;z-index:0;
+  background:radial-gradient(closest-side,rgba(15,10,12,.62),rgba(15,10,12,0) 76%);
+  filter:blur(70px);transform:translate(-150px,60px)}
+
+.layer{position:absolute;display:block;image-rendering:auto}
+/* 顺序（千万别弄反）：
+   身体 → 头发 → 脸红 → 五官。
+   头发在身体上面，五官在头发上面——她的眼睛要能透过刘海露出来。
+   头发放到身体下面的话刘海会发糊（试过，一眼可见）。 */
+#L-body{z-index:1}
+#L-hair{z-index:2}
+#L-blush{z-index:3}
+#L-face{z-index:4}
+/* 她睁着的那双眼睛（只有眼睛，没带眉毛——一起淡会成鬼影）。
+   眨眼时它慢慢淡掉 = 眼睑落下来，淡回来 = 睁开。
+   这一层只有**待机**时在（带着情绪说话时，脸上的眼睛是那张表情自带的，
+   见 app.js 的 syncEyes）。 */
+#L-eyes{z-index:5}
+
+/* 眨眼：0→35% 闭上，35→55% 闭着停一下，55→100% 睁开。
+   总时长由 app.js 每次现给（600~800ms）——比真人慢，看得清。
+   宝宝 2026-10-11：「把眨眼的时长变久一点 直接当一个表情
+   但要有动画一样的转变过程 不要两张图切」。 */
+@keyframes eyeBlink{
+  0%  {opacity:1}
+  18% {opacity:0}
+  70% {opacity:0}
+  100%{opacity:1}
+}
+
+/* 说话用的那一小块嘴，压在最上面。
+   **默认藏着**——万一脚本出错，也不会有一张孤零零的嘴浮在她脸上。
+   说话时由 app.js 把它打开，它正好盖住平时抿着的那张小嘴
+   （量过：盖不住的像素是 0）。
+
+   宝宝 2026-10-26 在 all_faces.png 上点的第 10 张（00000i）：
+   平时抿着的那张嘴张开时，就用这张的嘴。
+   开合不是固定节拍的硬切，也不是两张图来回换——
+   app.js 每帧按声音给 --mopen（0.16 = 抿住，1 = 张开）和 --mopenx
+   （嘴窄一点/宽一点），嘴跟着声音平滑地上去、下来；
+   遮片和嘴再用 90ms 的 opacity 交叉淡入淡出，
+   待机的嘴被皮肤慢慢盖住、张开的嘴慢慢浮上来。
+   所以既不会「啪」地出现，也不会露出两张嘴。 */
+#L-mouth-cover{z-index:6;display:block;opacity:0;pointer-events:none;
+  transition:opacity 90ms ease-out}
+#L-mouth-cover.on{opacity:1}
+#L-mouth{z-index:7;display:block;opacity:0;pointer-events:none;
+  transform-origin:50% 50%;
+  transition:opacity 90ms ease-out;
+  transform:translate3d(var(--mx,0px),var(--my,0px),0) rotate(var(--mrot,0deg)) scale(var(--mopenx,1),var(--mopen,.16))}
+#L-mouth.on{opacity:1}
+
+/* ── 字幕板 ────────────────────────────────────────
+   视觉小说的对话框：横贯窗口的一条板，上面压着她的名牌。 */
+#plate{position:absolute;left:52px;right:52px;bottom:100px;z-index:3;
+  min-height:126px;padding:30px 32px 22px;
+  /* 上浅下深一点点：她的衣服在板子上会透出来，字得压得住它 */
+  background:linear-gradient(180deg,
+    rgba(58,46,51,.90) 0%, rgba(58,46,51,.94) 52%, rgba(58,46,51,.97) 100%);
+  -webkit-backdrop-filter:blur(4px);backdrop-filter:blur(4px);
+  border-top:1px solid rgba(224,169,109,.42);
+  box-shadow:0 -20px 46px rgba(0,0,0,.42), inset 0 1px 0 rgba(245,239,233,.05);
+  transition:border-color .25s}
+#plate.is-listening{border-top-color:var(--lamp)}
+#plate.is-thinking{border-top-color:rgba(185,155,209,.55)}
+
+#name{position:absolute;top:-11px;left:26px;padding:1px 13px 2px;
+  background:var(--room);border:1px solid rgba(185,155,209,.34);border-bottom:none;
+  font-family:var(--mincho);font-size:14px;font-weight:500;
+  letter-spacing:.2em;color:var(--fuji);line-height:1.5}
+
+#jp{margin:0 0 6px;font-family:var(--mincho);font-size:13px;font-weight:400;
+  line-height:1.95;letter-spacing:.05em;color:var(--ink);min-height:1.95em}
+#cn{margin:0;font-family:var(--mincho);font-size:22px;font-weight:500;
+  line-height:1.86;letter-spacing:.02em;color:var(--paper);min-height:1.86em}
+#cn .me{color:var(--ink);font-size:19px}      /* 「……」这类她自己发出的声音 */
+#cn .err{font-family:var(--gothic);font-size:14px;letter-spacing:.03em;color:var(--ink)}
+
+/* 光标：只在她「正在说」的时候闪 */
+#cn.typing::after{content:"";display:inline-block;width:.5em;height:1.05em;
+  margin-left:.12em;vertical-align:-.16em;background:var(--lamp);
+  opacity:.75;animation:caret 1.05s steps(1) infinite}
+@keyframes caret{50%{opacity:0}}
+
+/* ── 打字条（按「打字」才出现）───────────────────── */
+#typebar{display:none;margin-top:14px;gap:10px;align-items:center;
+  border-bottom:1px solid rgba(185,155,209,.4);padding-bottom:7px}
+#plate.typing #typebar{display:flex}
+#typing{flex:1;background:none;border:none;outline:none;color:var(--paper);
+  font-family:var(--mincho);font-size:19px;letter-spacing:.02em;padding:2px 0}
+#typing::placeholder{color:#6E5F66}
+#typebar button{font-family:var(--gothic);font-size:12px;letter-spacing:.18em;
+  color:var(--ink);background:none;border:none;cursor:pointer;padding:4px 2px}
+#typebar button:hover{color:var(--lamp)}
+
+/* ── 两个按钮 ────────────────────────────────────── */
+#controls{position:absolute;left:52px;right:52px;bottom:26px;z-index:3;
+  display:flex;gap:12px}
+#controls button{font-family:var(--gothic);font-size:13px;letter-spacing:.22em;
+  color:var(--ink);background:transparent;cursor:pointer;
+  border:1px solid rgba(156,139,146,.4);padding:11px 0;
+  transition:color .2s,border-color .2s,background .2s}
+#controls button:hover{color:var(--paper);border-color:rgba(156,139,146,.62)}
+#controls button:active,#controls button.on{
+  color:var(--lamp);border-color:var(--lamp);background:rgba(224,169,109,.13)}
+/* 主按钮稍微亮一点：它是这个窗口里唯一的「正事」 */
+#talk{flex:2;color:#C8BCC1;border-color:rgba(156,139,146,.5)}
+#type{flex:1}
+button:focus-visible,input:focus-visible{outline:1px solid var(--lamp);outline-offset:2px}
+
+/* 参数面板：按住左上角的小点才出来，平时完全不存在 */
+#gear{position:absolute;left:14px;top:12px;z-index:5;font-family:var(--gothic);
+  font-size:12px;letter-spacing:.1em;color:#5C4E54;background:none;border:none;
+  cursor:pointer;padding:4px 6px}
+#gear:hover{color:var(--ink)}
+#tune{position:absolute;left:0;right:0;top:0;z-index:6;display:none;
+  padding:22px 26px 24px;background:rgba(36,28,30,.97);
+  border-bottom:1px solid rgba(224,169,109,.42);
+  font-family:var(--gothic);font-size:12.5px;color:var(--ink)}
+#tune.open{display:block}
+#tune .row{display:flex;align-items:center;gap:12px;margin-bottom:11px}
+#tune .row label{width:76px;letter-spacing:.1em;flex:none}
+#tune input[type=range]{flex:1;accent-color:var(--lamp)}
+#tune .val{width:56px;text-align:right;color:var(--paper);
+  font-variant-numeric:tabular-nums}
+#tune p{margin:14px 0 0;line-height:1.75;color:#7E6E75}
+#tune .close{position:absolute;right:16px;top:14px;background:none;border:none;
+  color:var(--ink);cursor:pointer;font-size:14px;letter-spacing:.1em}
+#tune .close:hover{color:var(--lamp)}
+
+/* ── 换衣服 / 换场景 ────────────────────────────────
+   左上角那个「衣」点开。缩略图一排排摆着，点一下就换。
+   衣服的缩略图直接用立绘（CSS 缩放，不另做小图），
+   `object-position` 往下挪一点，正好露的是**上半身那件衣服**。 */
+#closet{position:absolute;left:34px;top:12px;z-index:5;font-family:var(--gothic);
+  font-size:12px;letter-spacing:.1em;color:#5C4E54;background:none;border:none;
+  cursor:pointer;padding:4px 6px}
+#closet:hover{color:var(--ink)}
+#closetPanel{position:absolute;left:0;right:0;top:0;bottom:0;z-index:7;display:none;
+  padding:22px 26px 26px;background:rgba(36,28,30,.985);
+  font-family:var(--gothic);font-size:12.5px;color:var(--ink);overflow-y:auto}
+#closetPanel.open{display:block}
+#closetPanel .hint{margin:2px 0 10px;letter-spacing:.18em;color:#7E6E75}
+#closetPanel .close{position:absolute;right:16px;top:14px;background:none;border:none;
+  color:var(--ink);cursor:pointer;font-size:14px;letter-spacing:.1em}
+#closetPanel .close:hover{color:var(--lamp)}
+#closetPanel .grid{display:grid;gap:7px;margin-bottom:18px}
+#closetBodies,#closetPrivate{grid-template-columns:repeat(7,1fr)}
+#closetRooms{grid-template-columns:repeat(4,1fr)}
+#closetPanel button.pick{position:relative;padding:0;margin:0;
+  border:1px solid rgba(156,139,146,.32);border-radius:3px;
+  background:rgba(20,15,16,.6);cursor:pointer;overflow:hidden;aspect-ratio:3/4}
+#closetRooms button.pick{aspect-ratio:16/9}
+#closetPanel button.pick img{width:100%;height:100%;object-fit:cover;
+  object-position:50% 26%;display:block;opacity:.7;transition:opacity .18s}
+#closetRooms button.pick img{object-position:50% 50%}
+#closetPanel button.pick:hover img{opacity:1}
+#closetPanel button.pick.on{border-color:var(--lamp)}
+#closetPanel button.pick.on img{opacity:1}
+#closetPanel button.pick span{position:absolute;left:0;right:0;bottom:0;
+  padding:2px 5px;font-size:10.5px;letter-spacing:.03em;color:var(--paper);
+  background:linear-gradient(transparent,rgba(20,14,16,.9));text-align:left;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+/* ── 对话记录 ───────────────────────────────────────
+   全屏遮罩，但背景完全不动；她还在后面，只是被压暗。
+   文字直接浮在遮罩上，不铺一块块实心卡片。 */
+#logBtn{position:absolute;left:54px;top:12px;z-index:5;font-family:var(--gothic);
+  font-size:12px;letter-spacing:.1em;color:#5C4E54;background:none;border:none;
+  cursor:pointer;padding:4px 6px}
+#logBtn:hover{color:var(--ink)}
+#logPanel{position:fixed;inset:0;z-index:9;display:none;
+  background:
+    radial-gradient(120% 90% at 50% 45%, rgba(20,15,17,.62) 0%, rgba(20,15,17,.78) 58%, rgba(20,15,17,.88) 100%);
+  font-family:var(--gothic)}
+#logPanel.open{display:flex}
+#logBox{position:relative;width:min(680px,calc(100% - 56px));height:100%;
+  margin:0 auto;display:flex;flex-direction:column;padding:30px 0 24px}
+#logHead{display:flex;align-items:baseline;justify-content:space-between;
+  padding:0 4px 12px;border-bottom:1px solid rgba(224,169,109,.32);flex:none}
+#logTitle{font-family:var(--mincho);font-size:17px;letter-spacing:.28em;color:var(--lamp)}
+#logClose{background:none;border:none;color:var(--ink);cursor:pointer;
+  font-family:var(--gothic);font-size:12px;letter-spacing:.18em;padding:4px 6px}
+#logClose:hover{color:var(--paper)}
+#logScroll{flex:1;overflow-y:auto;overscroll-behavior:contain;
+  padding:18px 10px 30px;
+  scrollbar-width:thin;scrollbar-color:rgba(185,155,209,.35) transparent;
+  -webkit-mask-image:linear-gradient(to bottom,transparent 0,#000 18px,#000 calc(100% - 22px),transparent 100%);
+  mask-image:linear-gradient(to bottom,transparent 0,#000 18px,#000 calc(100% - 22px),transparent 100%)}
+#logScroll::-webkit-scrollbar{width:5px}
+#logScroll::-webkit-scrollbar-thumb{background:rgba(185,155,209,.32);border-radius:3px}
+#logList{display:flex;flex-direction:column;gap:0}
+.log-entry{position:relative;padding:11px 0 13px 18px;
+  border-left:1px solid rgba(224,169,109,.20)}
+.log-entry + .log-entry{margin-top:4px}
+.log-entry .log-who{font-family:var(--mincho);font-size:11.5px;letter-spacing:.22em;
+  color:var(--fuji);margin-bottom:3px}
+/* 宝宝自己说的话：名字用灯光色，正文稍暗一点，
+   一眼能跟千岁那句分开，又不用做成聊天软件那种左右气泡。 */
+.log-entry.me{border-left-color:rgba(224,169,109,.40)}
+.log-entry.me .log-who{color:var(--lamp)}
+.log-entry.me .log-cn{color:#D9CCD1}
+.log-entry .log-cn{font-family:var(--mincho);font-size:17.5px;line-height:1.9;
+  color:var(--paper);letter-spacing:.02em;white-space:pre-wrap}
+.log-entry .log-jp{font-family:var(--mincho);font-size:12px;line-height:1.85;
+  color:var(--ink);margin-top:3px;white-space:pre-wrap}
+.log-entry .log-meta{display:flex;align-items:center;gap:8px;margin-top:5px;
+  font-size:10.5px;letter-spacing:.08em;color:#6E5F66}
+.log-entry .log-mood{color:var(--lamp);border:1px solid rgba(224,169,109,.3);
+  padding:0 5px;border-radius:2px}
+.log-empty{padding:38px 0;text-align:center;color:#6E5F66;
+  font-family:var(--mincho);font-size:14px;letter-spacing:.16em}
+#logLatest{position:absolute;left:50%;bottom:8px;transform:translateX(-50%);
+  display:none;background:rgba(36,28,30,.94);border:1px solid rgba(224,169,109,.42);
+  color:var(--lamp);font-family:var(--gothic);font-size:11.5px;letter-spacing:.12em;
+  padding:6px 14px;border-radius:2px;cursor:pointer}
+#logLatest.show{display:block}
+#logLatest:hover{background:rgba(58,46,51,.98);color:var(--paper)}
+body.log-open #plate,body.log-open #controls,body.log-open #gear,
+body.log-open #closet,body.log-open #logBtn{opacity:0;pointer-events:none}
+
+/* 她动起来（只在用户没关掉动效时） */
+@media (prefers-reduced-motion: no-preference){
+  #breathe{animation:breathe 6.4s ease-in-out infinite}
+  @keyframes breathe{
+    0%,100%{transform:scale(1)}
+    50%{transform:scale(1.0045) translateY(-1px)}
+  }
+  body.ready #figure{animation:arrive .95s cubic-bezier(.2,.7,.25,1) both}
+  @keyframes arrive{
+    from{opacity:0;transform:scale(var(--s)) translateY(16px)}
+    to{opacity:1;transform:scale(var(--s)) translateY(0)}
+  }
+}
+@media (prefers-reduced-motion: reduce){
+  #cn.typing::after{animation:none}
+}
+
+/* ── 界面入口提亮（2026-10-28）───────────────────────
+   宝宝说衣服、记录、打字、说话这几个入口不够明显。
+   统一做成半透明深色小牌：金边、微光、悬停变亮，压得住背景又看得清。 */
+#topbar{position:absolute;left:18px;top:12px;z-index:5;display:flex;gap:8px}
+#topbar button{position:static;font-family:var(--gothic);font-size:13px;
+  letter-spacing:.12em;color:#E4D6DA;background:rgba(30,23,26,.66);
+  border:1px solid rgba(224,169,109,.34);border-radius:2px;
+  padding:8px 12px 7px;cursor:pointer;text-shadow:0 1px 3px rgba(0,0,0,.45);
+  -webkit-backdrop-filter:blur(7px);backdrop-filter:blur(7px);
+  box-shadow:0 6px 18px rgba(0,0,0,.22);
+  transition:color .18s,border-color .18s,background .18s,box-shadow .18s}
+#topbar button:hover{color:var(--paper);border-color:rgba(224,169,109,.70);
+  background:rgba(58,46,51,.88);box-shadow:0 8px 24px rgba(0,0,0,.28)}
+#topbar button:active{color:#241C1E;background:var(--lamp);border-color:var(--lamp)}
+body.log-open #topbar{opacity:0;pointer-events:none}
+
+#controls{gap:12px;bottom:24px}
+#controls button{font-size:14px;letter-spacing:.16em;color:#EADFE2;text-shadow:0 1px 3px rgba(0,0,0,.45);
+  background:rgba(30,23,26,.70);border:1px solid rgba(224,169,109,.32);
+  border-radius:2px;padding:14px 0;
+  -webkit-backdrop-filter:blur(7px);backdrop-filter:blur(7px);
+  box-shadow:0 8px 24px rgba(0,0,0,.22);
+  transition:color .18s,border-color .18s,background .18s,box-shadow .18s}
+#controls button:hover{color:var(--paper);border-color:rgba(224,169,109,.72);
+  background:rgba(58,46,51,.90)}
+#controls button:active,#controls button.on{color:#241C1E;border-color:var(--lamp);
+  background:var(--lamp);box-shadow:0 0 0 1px rgba(224,169,109,.2),
+  0 10px 26px rgba(224,169,109,.14)}
+#talk{flex:2;color:var(--paper);border-color:rgba(224,169,109,.62);
+  background:linear-gradient(180deg,rgba(224,169,109,.20),rgba(58,46,51,.78))}
+#type{flex:1}
+#talk::before{content:"";display:inline-block;width:6px;height:6px;border-radius:50%;
+  background:var(--lamp);margin-right:9px;vertical-align:1px;
+  box-shadow:0 0 8px rgba(224,169,109,.7)}
+#type::before{content:"✎";display:inline-block;margin-right:7px;
+  color:var(--fuji);font-size:14px}
+#talk.on::before,#talk:active::before{background:#241C1E;box-shadow:none}
+#type.on::before,#type:active::before{color:#241C1E}
+
+#typebar{border:1px solid rgba(185,155,209,.34);background:rgba(20,15,17,.34);
+  padding:8px 10px 7px;border-radius:2px;gap:8px}
+#typing{font-size:18px}
+#typebar button{color:var(--lamp);border:1px solid rgba(224,169,109,.4);
+  padding:5px 12px;border-radius:2px;background:rgba(224,169,109,.08);
+  letter-spacing:.12em}
+#typebar button:hover{color:#241C1E;background:var(--lamp);border-color:var(--lamp)}
+
+/* 输入框里要能正常选字/划选，别被 body 的 user-select:none 影响 */
+#typing{-webkit-user-select:text;user-select:text}

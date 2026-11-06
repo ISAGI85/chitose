@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>千岁</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<!-- 她住的屋子。图是游戏自己的（bg05，千岁那间和室），不是姐姐画的。 -->
+<div id="room"></div>
+
+<div id="lamp"></div>
+<div id="vignette"></div>
+
+<!-- 她。图层坐标全部来自 assets/layers.json（读 .hg3 文件头得到的），不手打。 -->
+<div id="pivot">
+  <div id="figure">
+    <div id="breathe">
+      <!-- 她挡住的屋里光：落在身后的障子上，往左下偏一点 -->
+      <div id="castShadow"></div>
+      <img class="layer" id="L-body" alt="">
+      <img class="layer" id="L-hair" alt="">
+      <img class="layer" id="L-blush" alt="">
+      <img class="layer" id="L-face" alt="">
+      <!-- 她睁着的那双眼睛，单独一层盖在最上面。
+           眨眼时让它**慢慢淡掉**——淡没的瞬间底下就是闭着眼的她，
+           看着就是眼睑慢慢落下来，不是两张图硬切。见 app.js 的 blinkOn()。 -->
+      <img class="layer" id="L-eyes" alt="">
+      <!-- 说话时盖上去的一小块嘴：脸永远是上面那张（眼睛不动），
+           只有这块嘴在开合。见 assets/layers.json 的 mouth.open。 -->
+      <!-- 说话时先盖住待机嘴的皮肤块；不然淡入的圆嘴下面会露出原来的嘴 -->
+      <img class="layer" id="L-mouth-cover" alt="">
+      <img class="layer" id="L-mouth" alt="">
+    </div>
+  </div>
+</div>
+
+<main id="plate">
+  <div id="name">茑町 千歳</div>
+  <p id="jp"></p>
+  <p id="cn"></p>
+  <form id="typebar" autocomplete="off">
+    <input id="typing" lang="zh-CN" inputmode="text" autocomplete="off"
+           autocapitalize="off" spellcheck="false" placeholder="打字给千岁…" aria-label="打字给千岁">
+    <button type="submit">说</button>
+  </form>
+</main>
+
+<div id="controls">
+  <button id="talk">按住说话</button>
+  <button id="type">打字</button>
+</div>
+
+<div id="topbar">
+  <button id="gear" title="摆一摆">微调</button>
+  <button id="closet" title="换衣服 / 换场景">换衣</button>
+  <button id="logBtn" title="对话记录（L）">对话记录</button>
+</div>
+<div id="tune">
+  <button class="close" id="tuneClose">收起</button>
+  <div class="row"><label>大小</label>
+    <input type="range" id="tScale" min="0.28" max="0.78" step="0.005"><span class="val" id="vScale"></span></div>
+  <div class="row"><label>左右</label>
+    <input type="range" id="tX" min="400" max="1000" step="1"><span class="val" id="vX"></span></div>
+  <div class="row"><label>上下</label>
+    <input type="range" id="tY" min="-240" max="240" step="1"><span class="val" id="vY"></span></div>
+  <p>这是千岁自己的坐标，不是姐姐猜的。要动也只是你想换个取景——数字会记在这台机器上，下次打开还在。</p>
+</div>
+
+<!-- 换衣服 / 换场景。宝宝 2026-10-11：「就是我自由切换」。
+     衣服 13 套、场景 29 张，两样都是游戏本体的素材，缩略图点一下就换。
+     选了哪套记在 localStorage 里，下次打开还是它。 -->
+<div id="closetPanel">
+  <button class="close" id="closetClose">收起</button>
+  <p class="hint">穿哪身</p>
+  <div class="grid" id="closetBodies"></div>
+  <p class="hint">在哪儿</p>
+  <div class="grid" id="closetRooms"></div>
+  <!-- 内衣和没穿的那几套单独放最后（宝宝 2026-10-11：
+       「把那些 h 的衣服和裸体另外分一类 放到背景的下面」）。
+       分类写死在 app.js 的 PRIVATE_BODIES 里。 -->
+  <p class="hint">私房</p>
+  <div class="grid" id="closetPrivate"></div>
+</div>
+
+<!-- 对话记录：全屏盖上来，但后面的房间和她不动、还看得见。
+     文字在遮罩上滚，像 galgame 的 Log 页。 -->
+<div id="logPanel" role="dialog" aria-modal="true" aria-hidden="true" aria-label="对话记录">
+  <div id="logBox">
+    <header id="logHead">
+      <span id="logTitle">对话记录</span>
+      <button id="logClose" type="button">关闭</button>
+    </header>
+    <div id="logScroll">
+      <div id="logList"></div>
+    </div>
+    <button id="logLatest" type="button">回到最新 ↓</button>
+  </div>
+</div>
+
+<script src="app.js"></script>
+<!-- 视线跟随 + 图层视差。单独一个文件，app.js 不用知道它的存在。
+     不要这个效果的话，删掉这一行就行。 -->
+<script src="gaze.js"></script>
+</body>
+</html>

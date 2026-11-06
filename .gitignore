@@ -1,0 +1,37 @@
+# ── 本机环境 ──────────────────────────────
+venv/
+__pycache__/
+*.pyc
+*.pyo
+
+# ── 大块头：模型和工具，不进仓库 ──────────
+# GPT-SoVITS 整合包由别人自己下载（README 有说明）
+tools/
+
+# ── 提取出来的原料 / 训练素材 ──────────────
+extracted/
+train_wav/
+ref/
+ref_wav/
+asr/
+
+# ── 运行产物 ──────────────────────────────
+out/
+tmp/
+backup/
+
+# ── 跟这个项目无关的目录 ──────────────────
+web/nanning/
+docs/superpowers/
+
+# ── 本地私有配置 ──────────────────────────
+# config.json 里放着宝宝自己的模型钥匙，绝不进仓库
+config.json
+
+# 开场问候是千岁本人的声音，不公开
+app/web/assets/voice/
+
+# ── 系统垃圾 ──────────────────────────────
+.DS_Store
+Thumbs.db
+desktop.ini
