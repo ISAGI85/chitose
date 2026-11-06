@@ -34,7 +34,7 @@
 会用 git 的话：
 
 ```
-git clone <仓库地址>
+git clone https://github.com/ISAGI85/chitose.git
 ```
 
 ### 3. 双击 `setup.bat`
