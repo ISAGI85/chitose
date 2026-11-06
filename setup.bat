@@ -1,4 +1,15 @@
 @echo off
+rem ============================================================
+rem  千岁 - 第一次安装
+rem
+rem  做什么：
+rem    1. 用 py -3 建一个 venv 虚拟环境
+rem    2. 装 requirements.txt 里的依赖
+rem    3. 如果没有 config.json，从 config.example.json 复制一份
+rem
+rem  什么时候跑：只跑一次。装完以后用 start.bat 或 start-voice.bat。
+rem  需要：Python 3.10+（安装时勾选 Add Python to PATH）
+rem ============================================================
 chcp 65001 >nul
 title 千岁 - 安装
 cd /d %~dp0
